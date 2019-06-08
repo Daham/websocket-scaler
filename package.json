@@ -1,0 +1,44 @@
+{
+      "name": "websocket-scaler",
+      "version": "1.0.0",
+      "description": "Horizontally Scalable websocket module for Node.js with Websocket module and Redis.",
+      "main": "./dist/index.js",
+      "scripts": {
+            "test": "jest --detectOpenHandles",
+            "start": "node ./bin/www",
+            "build": "yarn run clean && yarn install && gulp",
+            "build:prod": "yarn run clean && yarn install && gulp prod",
+            "clean": "rm -rf dist/",
+            "coverage": "jest --coverage",
+            "eslint": "eslint 'src/**/*.js'",
+            "eslint-fix": "eslint 'src/**/*.js' --fix",
+            "coveralls": "jest --coverage --coverageReporters=text-lcov | coveralls"
+      },
+      "author": "Daham Positha Pathiraja",
+      "license": "MIT",
+      "dependencies": {
+            "events": "^3.0.0",
+            "redis": "^2.8.0",
+            "underscore": "^1.9.1",
+            "ws": "^7.0.0"
+      },
+      "devDependencies": {
+            "babel": "^6.23.0",
+            "babel-plugin-transform-object-rest-spread": "^6.23.0",
+            "babel-preset-env": "^1.6.1",
+            "chai-json-schema": "^1.5.0",
+            "coveralls": "^3.0.3",
+            "eslint": "^3.18.0",
+            "eslint-plugin-prefer-object-spread": "^1.2.1",
+            "gulp": "^3.9.1",
+            "gulp-babel": "^6.1.2",
+            "gulp-sourcemaps": "^2.4.1",
+            "jest": "^24.8.0",
+            "lint-staged": "^3.3.1",
+            "mocha": "^3.2.0",
+            "nyc": "^11.1.0",
+            "sinon": "^2.2.0",
+            "source-map-support": "^0.4.15",
+            "supertest": "latest"
+      }
+}

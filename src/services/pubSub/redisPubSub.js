@@ -1,8 +1,6 @@
 import * as events from 'events';
 import { createClient } from 'redis';
 
-import * as constants from '../../utils/constants';
-
 /**
  * @description - publisher/subscriber module using Redis publisher and Redis subscriber.
  * @class RedisPubSub
@@ -30,8 +28,7 @@ class RedisPubSub extends events.EventEmitter {
         _this._publisher = createClient({ host, port });
 
         _this._subscriber.on('message', (channel, message) => {
-            // eslint-disable-next-line no-console
-            console.log(`Message "${message}" on channel "${channel}" arrived!`);
+            _this.emit('message', channel, message);
         });
     }
 
@@ -75,6 +72,7 @@ class RedisPubSub extends events.EventEmitter {
      */
     publish(channel, payload) {
         const _this = this;
+
         _this._publisher.publish(channel, payload);
     }
 
@@ -86,10 +84,6 @@ class RedisPubSub extends events.EventEmitter {
     subscribe(channel) {
         const _this = this;
         _this._subscriber.subscribe(channel);
-
-        _this._subscriber.on('message', (channel, message) => {
-            _this.emit('message', channel, message);
-        });
     }
 }
 

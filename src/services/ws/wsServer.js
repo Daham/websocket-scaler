@@ -28,14 +28,14 @@ class WSServer extends events.EventEmitter {
      * @description - Initilaizing the web-socket and use listners accordingly.
      * @memberof WSServer
      */
-    init(pubSub, webSocketMap, subscriptionTags) {
+    init(pubSub, webSocketMap, subscriptionTags, options) {
         const _this = this;
 
         _this._pubSub = pubSub;
         _this._webSocketMap = webSocketMap;
         _this._subscriptionTags = subscriptionTags;
 
-        const webSocketServer = new Server({ port: process.env.PORT });
+        const webSocketServer = new Server({ port: options.port });
 
         webSocketServer.on('connection', (webSocket) => {
 
@@ -51,7 +51,7 @@ class WSServer extends events.EventEmitter {
                     }
                 });
 
-                _this.emit('message', message);
+                _this.emit('message', message, webSocket);
             });
 
             webSocket.on('close', () => {

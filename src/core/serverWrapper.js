@@ -14,11 +14,12 @@ export default class ServerWrapper extends events.EventEmitter {
      *Creates an instance of ServerWrapper.
      * @memberof ServerWrapper
      */
-    constructor({ host, port }) {
+    constructor(serverOptions, queueOptions) {
         super();
         this._webSocketMap = {};
         this._subscriptionTags = [];
-        this._pubSub = new PubSub({ host, port });
+        this._serverOptions = serverOptions;
+        this._pubSub = new PubSub({ host: queueOptions.host, port: queueOptions.port });
     }
 
     /**
@@ -59,14 +60,14 @@ export default class ServerWrapper extends events.EventEmitter {
         let _this = this;
 
         _this._webSocketServer = webSocketServer;
-        _this._webSocketServer.init(_this._pubSub, _this._webSocketMap, _this._subscriptionTags);
+        _this._webSocketServer.init(_this._pubSub, _this._webSocketMap, _this._subscriptionTags, _this._serverOptions);
 
         _this._webSocketServer.on('connection', (webSocket) => {
             _this.emit('connection', webSocket);
         });
 
-        _this._webSocketServer.on('message', (message) => {
-            _this.emit('message', message);
+        _this._webSocketServer.on('message', (message, webSocket) => {
+            _this.emit('message', message, webSocket);
         });
 
         _this._webSocketServer.on('close', () => {
@@ -164,7 +165,7 @@ export default class ServerWrapper extends events.EventEmitter {
 
 
     /**
-     * @description
+     * @description - subscribe to a global message which is required to be listened by all web-socket servers.
      * @param {string} tagFieldKey - key of the field where the tag is given.
      * @param {string} tag - tag label.
      * @memberof ServerWrapper

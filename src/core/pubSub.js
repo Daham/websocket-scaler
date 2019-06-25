@@ -27,6 +27,10 @@ export default class PubSub extends events.EventEmitter {
         let _this = this;
         _this._messageQueue = messageQueue;
         _this._messageQueue.init({ host: _this._host, port: _this._port });
+
+        _this._messageQueue.on('message', (channel, message) => {
+            _this.emit('message', channel, message);
+        });
     }
 
     /**
@@ -54,10 +58,8 @@ export default class PubSub extends events.EventEmitter {
      */
     subscribe(channel) {
         let _this = this;
+
         _this._messageQueue.subscribe(channel);
-        _this._messageQueue.on('message', (channel, message) => {
-            _this.emit('message', channel, message);
-        });
     }
 }
 

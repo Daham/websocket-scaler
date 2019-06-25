@@ -131,8 +131,7 @@ export default class ServerWrapper extends events.EventEmitter {
         if (webSocket) {
             webSocket.send(JSON.stringify(data.message), (err) => {
                 if (err) {
-                    // eslint-disable-next-line no-console
-                    console.log(`Connection Error ${err}`);
+                    console.log(`Connection Error ${err}`);// eslint-disable-line no-console
                 }
             });
         }

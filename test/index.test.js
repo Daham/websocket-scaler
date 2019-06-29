@@ -1,5 +1,5 @@
 import Server from '../src/index';
-import { mockPublish, mockSubscribe, mockCreateClient } from 'redis';
+import { mockPublish } from 'redis';
 import * as constants from './constants';
 
 jest.mock('redis');

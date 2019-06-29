@@ -187,9 +187,10 @@ export default class ServerWrapper extends events.EventEmitter {
         let _this = this;
 
         const data = JSON.parse(payload);
+
         console.log(`Global Message Subscription: Message "${payload}" on channel "${channel}" arrived!`);// eslint-disable-line no-console
 
-        _this.emit('message', data.message);
+        _this.emit('message', JSON.stringify({ message: data.message }));
     }
 
     /**

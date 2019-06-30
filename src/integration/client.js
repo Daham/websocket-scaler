@@ -77,7 +77,7 @@ export default class SocketClientWrapper {
             }, 3000);// eslint-disable-line no-magic-numbers
 
             setTimeout(function () {
-                _this.ws.send(JSON.stringify({ name: "TUNNEL", message: `TUNNEL OPEND BY socket client: ${_this.port}` }));
+                _this.ws.send(JSON.stringify({ name: "TUNNEL", message: `TUNNEL OPENED BY socket client: ${_this.port}` }));
             }, 10000);// eslint-disable-line no-magic-numbers
 
         });
@@ -94,8 +94,8 @@ export default class SocketClientWrapper {
 }
 
 
-new SocketClientWrapper(8080).initNormalFucnctionality();// eslint-disable-line no-magic-numbers
-new SocketClientWrapper(8081).initNormalFucnctionality();// eslint-disable-line no-magic-numbers
-new SocketClientWrapper(8082).initGlobalMessageSendingFunctionality();// eslint-disable-line no-magic-numbers
+//new SocketClientWrapper(8080).initNormalFucnctionality();// eslint-disable-line no-magic-numbers
+//new SocketClientWrapper(8081).initNormalFucnctionality();// eslint-disable-line no-magic-numbers
+new SocketClientWrapper(8080).initGlobalMessageSendingFunctionality();// eslint-disable-line no-magic-numbers
 
 

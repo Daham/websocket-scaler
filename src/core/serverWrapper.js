@@ -70,16 +70,16 @@ export default class ServerWrapper extends events.EventEmitter {
             _this.emit('message', message, webSocket);
         });
 
-        _this._webSocketServer.on('close', () => {
-            _this.emit('close');
+        _this._webSocketServer.on('close', (webSocket) => {
+            _this.emit('close', webSocket);
         });
 
-        _this._webSocketServer.on('terminate', () => {
-            _this.emit('close');
+        _this._webSocketServer.on('terminate', (webSocket) => {
+            _this.emit('terminate', webSocket);
         });
 
-        _this._webSocketServer.on('error', (err) => {
-            _this.emit('socket-error', err);
+        _this._webSocketServer.on('socket-error', (webSocket, err) => {
+            _this.emit('socket-error', webSocket, err);
         });
     }
 
@@ -186,11 +186,9 @@ export default class ServerWrapper extends events.EventEmitter {
     _handleGlobalMessage(channel, payload) {
         let _this = this;
 
-        const data = JSON.parse(payload);
-
         console.log(`Global Message Subscription: Message "${payload}" on channel "${channel}" arrived!`);// eslint-disable-line no-console
 
-        _this.emit('message', JSON.stringify({ message: data.message }));
+        _this.emit('message', payload);
     }
 
     /**
@@ -205,6 +203,16 @@ export default class ServerWrapper extends events.EventEmitter {
     }
 
     /**
+     * @description
+     * @param {*} key - key
+     * @memberof ServerWrapper
+     */
+    removeWebSocket(key) {
+        const _this = this;
+        delete _this._webSocketMap[key];
+    }
+
+    /**
      * @description - 
      * @returns {Map<string>} - WebSocket Map
      * @memberof ServerWrapper
@@ -212,6 +220,15 @@ export default class ServerWrapper extends events.EventEmitter {
     getWebSocketMap() {
         const _this = this;
         return _this._webSocketMap;
+    }
+
+    /**
+     * @description - 
+     * @memberof ServerWrapper
+     */
+    getWebSocket(key) {
+        const _this = this;
+        return _this._webSocketMap[key];
     }
 
     /**

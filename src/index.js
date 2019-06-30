@@ -92,6 +92,18 @@ export default class Server extends events.EventEmitter {
         _this._server.on('message', (message, webSocket) => {
             _this.emit('message', message, webSocket);
         });
+
+        _this._server.on('close', (webSocket) => {
+            _this.emit('close', webSocket);
+        });
+
+        _this._server.on('terminate', (webSocket) => {
+            _this.emit('terminate', webSocket);
+        });
+
+        _this._server.on('socket-error', (webSocket, err) => {
+            _this.emit('socket-error', webSocket, err);
+        });
     }
 
     /**
@@ -102,6 +114,15 @@ export default class Server extends events.EventEmitter {
      */
     storeWebSocket(key, ws) {
         this._server.storeWebSocket(key, ws);
+    }
+
+    /**
+     * @description - remove websocket (removing ws is essential for scaling bahavior)
+     * @param {*} key- key in the socket map.
+     * @memberof Server
+     */
+    removeWebSocket(key) {
+        this._server.removeWebSocket(key);
     }
 
     /**
@@ -135,12 +156,22 @@ export default class Server extends events.EventEmitter {
     }
 
     /**
-    * @description - 
+    * @description - get web-socket map.
     * @returns {Map<string>} - WebSocket Map
     * @memberof Server
     */
-    getWebSocketMap(key) {
-        return this._server.getWebSocketMap(key);
+    getWebSocketMap() {
+        return this._server.getWebSocketMap();
+    }
+
+    /**
+     * @description - get a web-socket by key.
+     * @param {*} key
+     * @returns
+     * @memberof Server
+     */
+    getWebSocket(key) {
+        return this._server.getWebSocket(key);
     }
 
 

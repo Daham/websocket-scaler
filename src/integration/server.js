@@ -37,15 +37,28 @@ server.on('connection', () => {
 server.on('message', (message, ws) => {
     let data = JSON.parse(message);
 
+    log(`Normal Message==============>${data.message}`);
+
     if (ws) {
-        log(`Message from socket ${data.message}`);
         if (JSON.parse(message).name === 'JOIN') {
             log(`STORING SOCK-${data.port}`);
+            ws.identity = `SOCK-${data.port}`;
             server.storeWebSocket(`SOCK-${data.port}`, ws);
         }
-    } else {
-        log(`Normal Message-${data.message}`);
     }
 
     log(`-------------Current keys joined------------${JSON.stringify(Object.keys(server.getWebSocketMap()))}`);
 });
+
+server.on('close', (ws) => {
+    log(`Closing Socket -${ws.identity}`);
+});
+
+server.on('terminate', (ws) => {
+    log(`Terminating Socket -${ws.identity}`);
+});
+
+server.on('socket-error', (ws) => {
+    log(`WebSocket Error Socket -${ws.identity}`);
+});
+

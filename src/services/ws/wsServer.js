@@ -35,7 +35,7 @@ class WSServer extends events.EventEmitter {
         _this._webSocketMap = webSocketMap;
         _this._subscriptionTags = subscriptionTags;
 
-        const webSocketServer = new Server({ port: options.port });
+        const webSocketServer = new Server(options);
 
         webSocketServer.on('connection', (webSocket) => {
 
@@ -55,11 +55,11 @@ class WSServer extends events.EventEmitter {
             });
 
             webSocket.on('close', () => {
-                _this.emit('close');
+                _this.emit('close', webSocket);
             });
 
             webSocket.on('terminate', () => {
-                _this.emit('close');
+                _this.emit('terminate', webSocket);
             });
 
             webSocket.on("pong", () => {
@@ -67,7 +67,7 @@ class WSServer extends events.EventEmitter {
             });
 
             webSocket.on('error', (err) => {
-                _this.emit('socket-error', err);
+                _this.emit('socket-error', webSocket, err);
             });
         });
 

@@ -9,27 +9,43 @@ const log = function (data) {
 
 const server = new Server({
     serverType: 'ws',
-    queueType: 'redis',
-    serverOptions: {
-        port: process.env.PORT
-    },
-    queueOptions: {
-        host: '127.0.0.1',
-        port: 6379
+    queueType: 'amqp',
+    serverOptions: { port: process.env.PORT },
+    messageBrokerOptions: {
+        username: '',
+        password: '',
+        host: ''
     }
 });
-
-server.subscribeToGlobalMessage("name", "TUNNEL");
 
 server.on('connection', () => {
     log("CONNECTED");
 
-    if (process.env.PORT === '8082') {
-        setTimeout(function () {
+    if (process.env.PORT === '8080') {
+        setInterval(function () {
             log("CLOSING ");
-            server.close('SOCK-8080');
-            server.send('SOCK-8080', `HELLO FROM : ${process.env.PORT}`);
-        }, 20000); // eslint-disable-line no-magic-numbers
+            //server.close('SOCK-8080');
+            server.send('SOCK-8082', `HELLO Helani FROM : ${process.env.PORT}`, function (err) {
+                if (err) {
+                    console.log("======111========" + err);
+                }
+                console.log("=======222=======");
+            });
+        }, 10000); // eslint-disable-line no-magic-numbers
+    }
+
+
+    if (process.env.PORT === '8082') {
+        setInterval(function () {
+            log("CLOSING ");
+            //server.close('SOCK-8080');
+            server.send('SOCK-8082', `HELLO Daham FROM : ${process.env.PORT}`, function (err) {
+                if (err) {
+                    console.log("======111========" + err);
+                }
+                console.log("=======222=======");
+            });
+        }, 10000); // eslint-disable-line no-magic-numbers
     }
 
 });

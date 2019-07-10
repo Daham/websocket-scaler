@@ -71,14 +71,14 @@ export default class SocketClientWrapper {
             _this._log('trying to JOIN');
             _this.ws.send(JSON.stringify({ name: "JOIN", message: `JOINING socket client: ${_this.port}`, port: _this.port }));
 
-            setInterval(function () {
-                _this._log('sending usual message');
-                _this.ws.send(JSON.stringify({ name: "NETWORK_ONDEMAND", message: `ONDEMAND RESULT socket client: ${_this.port}` }));
-            }, 3000);// eslint-disable-line no-magic-numbers
+            // setInterval(function () {
+            //     _this._log('sending usual message');
+            //     _this.ws.send(JSON.stringify({ name: "NETWORK_ONDEMAND", message: `ONDEMAND RESULT socket client: ${_this.port}` }));
+            // }, 3000);// eslint-disable-line no-magic-numbers
 
-            setTimeout(function () {
-                _this.ws.send(JSON.stringify({ name: "TUNNEL", message: `TUNNEL OPENED BY socket client: ${_this.port}` }));
-            }, 10000);// eslint-disable-line no-magic-numbers
+            // setTimeout(function () {
+            //     _this.ws.send(JSON.stringify({ name: "TUNNEL", message: `TUNNEL OPENED BY socket client: ${_this.port}` }));
+            // }, 10000);// eslint-disable-line no-magic-numbers
 
         });
 
@@ -96,6 +96,6 @@ export default class SocketClientWrapper {
 
 //new SocketClientWrapper(8080).initNormalFucnctionality();// eslint-disable-line no-magic-numbers
 //new SocketClientWrapper(8081).initNormalFucnctionality();// eslint-disable-line no-magic-numbers
-new SocketClientWrapper(8080).initGlobalMessageSendingFunctionality();// eslint-disable-line no-magic-numbers
+new SocketClientWrapper(process.env.PORT).initGlobalMessageSendingFunctionality();// eslint-disable-line no-magic-numbers
 
 

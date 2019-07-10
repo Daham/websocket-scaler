@@ -1,6 +1,6 @@
 import * as events from 'events';
 
-import PubSub from './pubSub';
+import Rpc from './rpc';
 import * as constants from '../utils/constants';
 
 /**
@@ -19,36 +19,7 @@ export default class ServerWrapper extends events.EventEmitter {
         this._webSocketMap = {};
         this._subscriptionTags = [];
         this._serverOptions = serverOptions;
-        this._pubSub = new PubSub({ host: queueOptions.host, port: queueOptions.port });
-    }
-
-    /**
-     * @description - init server wrapper. 
-     * @memberof ServerWrapper
-     */
-    init() {
-        let _this = this;
-        //initiate global processes.
-        _this._initSendingProcess();
-        _this._initSocketCloseProcess();
-
-        _this._pubSub.on('message', (channel, payload) => {
-
-            console.log(`Sending Message "${payload}" on channel "${channel}" arrived!`);// eslint-disable-line no-console
-
-            if (channel === constants.SEND_CHANNEL) {
-                _this._handleSendingProcess(payload);
-            }
-
-            if (channel === constants.SOCKET_CLOSE_CHANNEL) {
-                _this._handleSocketCloseProcess(payload);
-            }
-
-            if (channel.startsWith(constants.GLOBAL_MESSAGE_SUBSCRIBE(''))) {// eslint-disable-line new-cap
-                _this._handleGlobalMessage(channel, payload);
-            }
-
-        });
+        this._rpc = new Rpc({ username: queueOptions.username, password: queueOptions.password, host: queueOptions.host }, this.handleRemoteProcess.bind(this, this._webSocketMap));
     }
 
     /**
@@ -60,7 +31,7 @@ export default class ServerWrapper extends events.EventEmitter {
         let _this = this;
 
         _this._webSocketServer = webSocketServer;
-        _this._webSocketServer.init(_this._pubSub, _this._webSocketMap, _this._subscriptionTags, _this._serverOptions);
+        _this._webSocketServer.init(_this._webSocketMap, _this._serverOptions);
 
         _this._webSocketServer.on('connection', (webSocket) => {
             _this.emit('connection', webSocket);
@@ -71,10 +42,18 @@ export default class ServerWrapper extends events.EventEmitter {
         });
 
         _this._webSocketServer.on('close', (webSocket) => {
+            let key = webSocket.key;
+            if (_this._webSocketMap[key]) {
+                _this.removeWebSocket(key);
+            }
             _this.emit('close', webSocket);
         });
 
         _this._webSocketServer.on('terminate', (webSocket) => {
+            let key = webSocket.key;
+            if (_this._webSocketMap[key]) {
+                _this.removeWebSocket(key);
+            }
             _this.emit('terminate', webSocket);
         });
 
@@ -92,58 +71,79 @@ export default class ServerWrapper extends events.EventEmitter {
     }
 
     /**
-     * @description - set publisher subscriber message queue.
-     * @param {object} pubSub - publisher subscriber.
+     * @description - set rpc message queue.
+     * @param {object} messageBroker - message broker.
      * @memberof ServerWrapper
      */
-    set pubSub(pubSub) {
-        this._pubSub.messageQueue = pubSub;
+    set messageBroker(messageBroker) {
+        this._rpc.messageBroker = messageBroker;
     }
 
     /**
-     * @description - get publisher subscriber message queue.
+     * @description - get rpc message broker.
      * @memberof ServerWrapper
      */
-    get pubSub() {
-        return this._pubSub.messageQueue;
+    get messageBroker() {
+        return this._rpc.messageBroker;
     }
 
     /**
-     * @description
+     * @description Handle remote process.
+     * @param {*} webSocketMap - websocket map
+     * @param {*} payload - payload
      * @memberof ServerWrapper
      */
-    _initSendingProcess() {
+    handleRemoteProcess(webSocketMap, payload, callback) {
+
         let _this = this;
-        _this._pubSub.subscribe(constants.SEND_CHANNEL);
-    }
-
-    /**
-     * @description - handle sending process.
-     * @param {*} payload
-     * @memberof ServerWrapper
-     */
-    _handleSendingProcess(payload) {
-        let _this = this;
-
         const data = JSON.parse(payload);
-        const webSocket = _this._webSocketMap[data.key];
 
-        if (webSocket) {
-            webSocket.send(JSON.stringify(data.message), (err) => {
-                if (err) {
-                    console.log(`Connection Error ${err}`);// eslint-disable-line no-console
-                }
-            });
+        switch (data.method) {
+            case constants.METHOD_SEND:
+                _this._handleSendingProcess(webSocketMap, payload, function (err) {
+                    if (err) {
+                        return callback(err);
+                    }
+                    return callback(null);
+                });
+                break;
+            case constants.METHOD_CLOSE:
+                _this._handleSocketCloseProcess(webSocketMap, payload, function (err) {
+                    if (err) {
+                        return callback(err);
+                    }
+                    return callback(null);
+                });
+                break;
+            default:
+                break;
         }
     }
 
     /**
-     * @description
+     * @description - handle sending process.
+     * @param {*} webSocketMap - websocket map
+     * @param {*} payload - payload
      * @memberof ServerWrapper
      */
-    _initSocketCloseProcess() {
-        let _this = this;
-        _this._pubSub.subscribe(constants.SOCKET_CLOSE_CHANNEL);
+    _handleSendingProcess(webSocketMap, payload, callback) {
+        const data = JSON.parse(payload);
+        const webSocket = webSocketMap[data.key];
+        console.log("=========start===========");
+        console.log(webSocketMap);
+        console.log(data.key);
+        console.log(webSocket);
+        console.log("==========end==========");
+        if (webSocket) {
+            console.log(`[Websocket-send] sending ${JSON.stringify(data.message)}`); // eslint-disable-line no-console
+            webSocket.send(JSON.stringify(data.message), (err) => {
+                if (err) {
+                    console.log(`[Websocket-send] Connection Error ${err}`); // eslint-disable-line no-console
+                    return callback(err);
+                }
+                return callback(null);
+            });
+        }
     }
 
     /**
@@ -151,44 +151,15 @@ export default class ServerWrapper extends events.EventEmitter {
      * @param {*} payload
      * @memberof ServerWrapper
      */
-    _handleSocketCloseProcess(payload) {
-        let _this = this;
+    _handleSocketCloseProcess(webSocketMap, payload) {
 
         const data = JSON.parse(payload);
-        const webSocket = _this._webSocketMap[data.key];
+        const webSocket = webSocketMap[data.key];
 
         if (webSocket) {
+            console.log(`[Websocket-close] closing socket with key: ${data.key}`); // eslint-disable-line no-console
             webSocket.close();
         }
-    }
-
-
-    /**
-     * @description - subscribe to a global message which is required to be listened by all web-socket servers.
-     * @param {string} tagFieldKey - key of the field where the tag is given.
-     * @param {string} tag - tag label.
-     * @memberof ServerWrapper
-     */
-    subscribeToGlobalMessage(tagFieldKey, tag) {
-        let _this = this;
-
-        //store all tags with the corresponding fields which should be globally listened.  
-        _this._subscriptionTags.push({ tagFieldKey: tagFieldKey, tag: tag });
-
-        _this._pubSub.subscribe(constants.GLOBAL_MESSAGE_SUBSCRIBE(tag));  // eslint-disable-line new-cap
-    }
-
-    /**
-     * @description - handle messages on global channels
-     * @param {*} payload
-     * @memberof ServerWrapper
-     */
-    _handleGlobalMessage(channel, payload) {
-        let _this = this;
-
-        console.log(`Global Message Subscription: Message "${payload}" on channel "${channel}" arrived!`);// eslint-disable-line no-console
-
-        _this.emit('message', payload);
     }
 
     /**
@@ -197,8 +168,15 @@ export default class ServerWrapper extends events.EventEmitter {
      * @param {object} webSocket - webSocket object
      * @memberof ServerWrapper
      */
-    storeWebSocket(key, webSocket) {
+    storeWebSocket(key, webSocket, metaDataObj) {
         const _this = this;
+
+        for (let key in metaDataObj) {
+            if (metaDataObj.hasOwnProperty(key)) {
+                webSocket[key] = metaDataObj[key];
+            }
+        }
+
         _this._webSocketMap[key] = webSocket;
     }
 
@@ -232,22 +210,33 @@ export default class ServerWrapper extends events.EventEmitter {
     }
 
     /**
-     * @description - 
-     * @param {string} key
-     * @param {string} message
+     * @description
+     * @param {*} key
+     * @param {*} message
+     * @param {*} callback
      * @memberof ServerWrapper
      */
-    send(key, message) {
-        this._pubSub.publish(constants.SEND_CHANNEL, JSON.stringify({ key: key, message: message }));
+    send(key, message, callback) {
+        this._rpc.remoteCall(JSON.stringify({ method: constants.METHOD_SEND, key: key, message: message }), function (result) {
+            if (result === constants.REMOTE_FUNC_SUCCESS_RESPONSE) {
+                return callback(null);
+            }
+            return callback(true);
+        });
     }
 
-
     /**
-     * @description - 
-     * @param {string} key
+     * @description
+     * @param {*} key
+     * @param {*} callback
      * @memberof ServerWrapper
      */
-    close(key) {
-        this._pubSub.publish(constants.SOCKET_CLOSE_CHANNEL, JSON.stringify({ key: key }));
+    close(key, callback) {
+        this._rpc.remoteCall(JSON.stringify({ method: constants.METHOD_CLOSE, key: key, message: '' }), function (result) {
+            if (result === constants.REMOTE_FUNC_SUCCESS_RESPONSE) {
+                return callback(null);
+            }
+            return callback(true);
+        });
     }
 }

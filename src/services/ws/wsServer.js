@@ -19,21 +19,17 @@ class WSServer extends events.EventEmitter {
      */
     constructor() {
         super();
-        this._pubSub = null;
         this._webSocketMap = null;
-        this._subscriptionTags = null;
     }
 
     /**
      * @description - Initilaizing the web-socket and use listners accordingly.
      * @memberof WSServer
      */
-    init(pubSub, webSocketMap, subscriptionTags, options) {
+    init(webSocketMap, options) {
         const _this = this;
 
-        _this._pubSub = pubSub;
         _this._webSocketMap = webSocketMap;
-        _this._subscriptionTags = subscriptionTags;
 
         const webSocketServer = new Server(options);
 
@@ -42,15 +38,6 @@ class WSServer extends events.EventEmitter {
             _this.emit('connection', webSocket);
 
             webSocket.on('message', (message) => {
-
-                //pubish message with websocket to subscribers of specific message tag.
-                _this._subscriptionTags.forEach((element) => {
-                    let tag = JSON.parse(message)[element.tagFieldKey];
-                    if (element.tag === tag) {
-                        _this._pubSub.publish(constants.GLOBAL_MESSAGE_SUBSCRIBE(tag), message); // eslint-disable-line new-cap
-                    }
-                });
-
                 _this.emit('message', message, webSocket);
             });
 

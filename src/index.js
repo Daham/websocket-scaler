@@ -7,7 +7,7 @@ import * as constants from './utils/constants';
 import wsServer from './services/ws/wsServer';
 
 //concrete publisher subscriber service classes
-import redisPubSub from './services/pubSub/redisPubSub';
+import amqpRpc from './services/rpc/amqpRpc';
 
 /**
  * @description - Web-Socket Server class.
@@ -22,12 +22,12 @@ export default class Server extends events.EventEmitter {
      * @param {object} { serverType, queueType, host, port, serverOptions, queueOptions }
      * @memberof Server
      */
-    constructor({ serverType, queueType, serverOptions, queueOptions }) {
+    constructor({ serverType, queueType, serverOptions, messageBrokerOptions }) {
         super();
         this._serverType = serverType;
         this._queueType = queueType;
         this._serverOptions = serverOptions;
-        this._queueOptions = queueOptions;
+        this._messageBrokerOptions = messageBrokerOptions;
 
         this._server = null;
         this._wsServer = null;
@@ -45,11 +45,9 @@ export default class Server extends events.EventEmitter {
         switch (_this._serverType) {
             case constants.WS:
                 switch (_this._queueType) {
-                    case constants.REDIS:
-                        _this._wsServer = wsServer;
-                        _this._pubSub = redisPubSub;
-                        break;
                     case constants.AMQP:
+                        _this._wsServer = wsServer;
+                        _this._messageBroker = amqpRpc;
                         break;
                     default:
                         break;
@@ -57,8 +55,6 @@ export default class Server extends events.EventEmitter {
                 break;
             case constants.SOCKET_IO:
                 switch (_this._queueType) {
-                    case constants.REDIS:
-                        break;
                     case constants.AMQP:
                         break;
                     default:
@@ -79,11 +75,9 @@ export default class Server extends events.EventEmitter {
     _initWebSocketServerWithPubSub() {
         const _this = this;
 
-        _this._server = new ServerWrapper(_this._serverOptions, _this._queueOptions);
+        _this._server = new ServerWrapper(_this._serverOptions, _this._messageBrokerOptions);
         _this._server.webSocketServer = _this._wsServer;
-        _this._server.pubSub = _this._pubSub;
-
-        _this._server.init();
+        _this._server.messageBroker = _this._messageBroker;
 
         _this._server.on('connection', (ws) => {
             _this.emit('connection', ws);
@@ -131,28 +125,27 @@ export default class Server extends events.EventEmitter {
      * @param {string} message - message as a string.
      * @memberof Server
      */
-    send(key, message) {
-        this._server.send(key, message);
+    send(key, message, callback) {
+        this._server.send(key, message, function (err) {
+            if (err) {
+                return callback(err);
+            }
+            return callback(null);
+        });
     }
-
 
     /**
      * @description - close web-socket
      * @param {string} key - key in the socket map.
      * @memberof Server
      */
-    close(key) {
-        this._server.close(key);
-    }
-
-    /**
-      * @description - subscribe to a global message which is required to be listened by all web-socket servers.
-      * @param {string} tagFieldKey - key of the field where the tag is given.
-      * @param {string} tag - tag label.
-      * @memberof Server
-      */
-    subscribeToGlobalMessage(tagFieldKey, tag) {
-        this._server.subscribeToGlobalMessage(tagFieldKey, tag);
+    close(key, callback) {
+        this._server.close(key, function (err) {
+            if (err) {
+                return callback(err);
+            }
+            return callback(null);
+        });
     }
 
     /**

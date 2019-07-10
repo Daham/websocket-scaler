@@ -15,3 +15,12 @@ export const WS = 'ws';
 export const REDIS = 'redis';
 export const SOCKET_IO = 'socket.io';
 export const AMQP = 'amqp';
+
+//AMQP constants
+export const DIST_FUNC_EXCHANGE = 'DIST_FUNC_EXCHANGE';
+export const REMOTE_FUNC_SUCCESS_RESPONSE = 'REMOTE_FUNC_SUCCESS_RESPONSE';
+export const REMOTE_FUNC_FAIL_RESPONSE = 'REMOTE_FUNC_FAIL_RESPONSE';
+
+//Server Wrapper Constants
+export const METHOD_SEND = 'send';
+export const METHOD_CLOSE = 'close';

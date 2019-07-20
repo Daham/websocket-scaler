@@ -24,3 +24,7 @@ export const REMOTE_FUNC_FAIL_RESPONSE = 'REMOTE_FUNC_FAIL_RESPONSE';
 //Server Wrapper Constants
 export const METHOD_SEND = 'send';
 export const METHOD_CLOSE = 'close';
+
+//REDIS Constants
+export const EXISTS = '1';
+export const NOT_EXISTS = '1';

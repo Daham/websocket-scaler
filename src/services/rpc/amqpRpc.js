@@ -110,7 +110,7 @@ class AmqpRpc extends events.EventEmitter {
                         console.log(`Sent ${content}`); // eslint-disable-line no-console
 
                         ch.consume(q.queue, (msg) => {
-                            console.log(`[RPC-Client] Received Message ${JSON.stringify(msg)}`); // eslint-disable-line no-console
+                            console.log(`[RPC-Client] Received Message ${msg.toString('utf8')}`); // eslint-disable-line no-console
                             if (msg.properties.correlationId === corr) {
                                 const result = msg.content.toString();
                                 console.log(`Receive ${result}`); // eslint-disable-line no-console

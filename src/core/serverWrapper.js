@@ -2,6 +2,7 @@ import * as events from 'events';
 
 import Rpc from './rpc';
 import * as constants from '../utils/constants';
+import Store from './store';
 
 /**
  * @description
@@ -11,25 +12,33 @@ import * as constants from '../utils/constants';
 export default class ServerWrapper extends events.EventEmitter {
 
     /**
-     *Creates an instance of ServerWrapper.
+     * Creates an instance of ServerWrapper.
+     * @param {object} serverOptions - options required for concrete server object.
+     * @param {object} brokerOptions - options required for concrete broker object.
+     * @param {object} storeOptions - options required for concrete store object.
      * @memberof ServerWrapper
      */
-    constructor(serverOptions, queueOptions) {
+    constructor(serverOptions, brokerOptions, storeOptions) {
         super();
         this._webSocketMap = {};
-        this._subscriptionTags = [];
         this._serverOptions = serverOptions;
-        this._rpc = new Rpc({ username: queueOptions.username, password: queueOptions.password, host: queueOptions.host }, this.handleRemoteProcess.bind(this, this._webSocketMap));
+
+        //Initiate the Remote Procedure Call(RPC) module required to invoke methods in peer websocket servers.
+        this._rpc = new Rpc({ username: brokerOptions.username, password: brokerOptions.password, host: brokerOptions.host }, this.handleRemoteProcess.bind(this, this._webSocketMap));
+
+        //Initiate store module required to store shared properties. 
+        this._store = new Store({ host: storeOptions.host, port: storeOptions.port });
     }
 
     /**
-     * @description - set the required web-socket server for server wrapper.
+     * @description - Set the required web-socket server for server wrapper.
      * @param {object} webSocketServer - web-socket server.
      * @memberof ServerWrapper
      */
     set webSocketServer(webSocketServer) {
         let _this = this;
 
+        //Creates websocket server and initiates listeners.
         _this._webSocketServer = webSocketServer;
         _this._webSocketServer.init(_this._webSocketMap, _this._serverOptions);
 
@@ -41,16 +50,20 @@ export default class ServerWrapper extends events.EventEmitter {
             _this.emit('message', message, webSocket);
         });
 
+        //In close event the websocket is removed from the socket map if it is available.
         _this._webSocketServer.on('close', (webSocket) => {
             let key = webSocket.key;
+
             if (_this._webSocketMap[key]) {
                 _this.removeWebSocket(key);
             }
             _this.emit('close', webSocket);
         });
 
+        //In terminate event the websocket is removed from the socket map if it is available.
         _this._webSocketServer.on('terminate', (webSocket) => {
             let key = webSocket.key;
+
             if (_this._webSocketMap[key]) {
                 _this.removeWebSocket(key);
             }
@@ -63,7 +76,7 @@ export default class ServerWrapper extends events.EventEmitter {
     }
 
     /**
-     * @description - get web-socket server.
+     * @description - Get web-socket server.
      * @memberof ServerWrapper
      */
     get webSocketServer() {
@@ -71,7 +84,7 @@ export default class ServerWrapper extends events.EventEmitter {
     }
 
     /**
-     * @description - set rpc message queue.
+     * @description - Set rpc message queue.
      * @param {object} messageBroker - message broker.
      * @memberof ServerWrapper
      */
@@ -80,7 +93,7 @@ export default class ServerWrapper extends events.EventEmitter {
     }
 
     /**
-     * @description - get rpc message broker.
+     * @description - Get rpc message broker.
      * @memberof ServerWrapper
      */
     get messageBroker() {
@@ -88,9 +101,27 @@ export default class ServerWrapper extends events.EventEmitter {
     }
 
     /**
-     * @description Handle remote process.
-     * @param {*} webSocketMap - websocket map
-     * @param {*} payload - payload
+     * @description - Set store.
+     * @param {object} store - store.
+     * @memberof ServerWrapper
+     */
+    set store(store) {
+        this._store.store = store;
+    }
+
+    /**
+     * @description - get store.
+     * @memberof ServerWrapper
+     */
+    get store() {
+        return this._store.store;
+    }
+
+    /**
+     * @description This is the method acts as the remote procedure which is called at any remote client call.
+     * @param {Map<string>} webSocketMap - websocket map
+     * @param {object} payload - payload
+     * @param {*} callback - The callback that handles the response.
      * @memberof ServerWrapper
      */
     handleRemoteProcess(webSocketMap, payload, callback) {
@@ -121,22 +152,23 @@ export default class ServerWrapper extends events.EventEmitter {
     }
 
     /**
-     * @description - handle sending process.
-     * @param {*} webSocketMap - websocket map
-     * @param {*} payload - payload
+     * @description - Handles sending process.
+     * @param {Map<string>} webSocketMap - websocket map
+     * @param {object} payload - payload
+     * @param {*} callback - The callback that handles the response.
      * @memberof ServerWrapper
      */
     _handleSendingProcess(webSocketMap, payload, callback) {
         const data = JSON.parse(payload);
         const webSocket = webSocketMap[data.key];
-        console.log("=========start===========");
-        console.log(webSocketMap);
-        console.log(data.key);
-        console.log(webSocket);
-        console.log("==========end==========");
+
+        console.log(`[Websocket-send] web-socket key: ${data.key}`); // eslint-disable-line no-console
+        console.log(`[Websocket-send] web-socket map: ${Object.keys(webSocketMap)}`); // eslint-disable-line no-console
+        console.log(`[Websocket-send] web-socket obj: ${webSocket}`); // eslint-disable-line no-console
+
         if (webSocket) {
             console.log(`[Websocket-send] sending ${JSON.stringify(data.message)}`); // eslint-disable-line no-console
-            webSocket.send(JSON.stringify(data.message), (err) => {
+            webSocket.send(data.message, (err) => {
                 if (err) {
                     console.log(`[Websocket-send] Connection Error ${err}`); // eslint-disable-line no-console
                     return callback(err);
@@ -147,8 +179,10 @@ export default class ServerWrapper extends events.EventEmitter {
     }
 
     /**
-     * @description - handle web-socket close process.
-     * @param {*} payload
+     * @description - Handles web-socket close process.
+     * @param {Map<string>} webSocketMap - websocket map
+     * @param {object} payload - payload
+     * @param {*} callback - The callback that handles the response.
      * @memberof ServerWrapper
      */
     _handleSocketCloseProcess(webSocketMap, payload) {
@@ -163,9 +197,10 @@ export default class ServerWrapper extends events.EventEmitter {
     }
 
     /**
-     * @description
+     * @description Store websocket in the socket map.
      * @param {string} key - key
      * @param {object} webSocket - webSocket object
+     * @param {object} metaDataObj - metadata to be stored within the websocket object itself (e.g identity, createdTime etc).
      * @memberof ServerWrapper
      */
     storeWebSocket(key, webSocket, metaDataObj) {
@@ -177,31 +212,36 @@ export default class ServerWrapper extends events.EventEmitter {
             }
         }
 
+        _this._store.set(key, constants.EXISTS);
         _this._webSocketMap[key] = webSocket;
+        console.log(`[Websocket-send] web-socket map after storing: ${Object.keys(_this.getWebSocketMap())}`); // eslint-disable-line no-console
     }
 
     /**
-     * @description
-     * @param {*} key - key
+     * @description - remove websocket (removing ws is essential for scaling bahavior)
+     * @param {object} key - key in the socket map.
      * @memberof ServerWrapper
      */
     removeWebSocket(key) {
         const _this = this;
+        _this._store.set(key, constants.NOT_EXISTS);
         delete _this._webSocketMap[key];
     }
 
     /**
-     * @description - 
-     * @returns {Map<string>} - WebSocket Map
-     * @memberof ServerWrapper
-     */
+    * @description - get web-socket map.
+    * @returns {Map<string>} - WebSocket Map
+    * @memberof ServerWrapper
+    */
     getWebSocketMap() {
         const _this = this;
         return _this._webSocketMap;
     }
 
     /**
-     * @description - 
+     * @description - get a web-socket by key.
+     * @param {string} - key
+     * @returns {object} - websocket
      * @memberof ServerWrapper
      */
     getWebSocket(key) {
@@ -210,10 +250,29 @@ export default class ServerWrapper extends events.EventEmitter {
     }
 
     /**
-     * @description
-     * @param {*} key
-     * @param {*} message
-     * @param {*} callback
+    * @description - Check whether the given websocket exists in other peer websocket maps.
+    * @param {string} key - key
+    * @param {boolean} callback - true/false
+    * @memberof ServerWrapper
+    */
+    isWebSocketGloballyExist(key, callback) {
+        const _this = this;
+        _this._store.get(key, function (err, value) {
+            if (err) {
+                return callback(true);
+            }
+            if (value === constants.EXISTS) {
+                return callback(null, true);
+            }
+            return callback(null, false);
+        });
+    }
+
+    /**
+     * @description - Send message through a given socket
+     * @param {string} key - key in the socket map.
+     * @param {string} message - message as a string.
+     * @param {*} callback - The callback that handles the response.
      * @memberof ServerWrapper
      */
     send(key, message, callback) {
@@ -226,9 +285,9 @@ export default class ServerWrapper extends events.EventEmitter {
     }
 
     /**
-     * @description
-     * @param {*} key
-     * @param {*} callback
+     * @description - Close web-socket
+     * @param {string} key - key in the socket map.
+     * @param {*} callback - The callback that handles the response.
      * @memberof ServerWrapper
      */
     close(key, callback) {

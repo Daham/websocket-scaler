@@ -24,11 +24,14 @@ class WSServer extends events.EventEmitter {
 
     /**
      * @description - Initilaizing the web-socket and use listners accordingly.
+     * @param {Map<string>} webSocketMap - socket map.
+     * @param {object} options - options
      * @memberof WSServer
      */
     init(webSocketMap, options) {
         const _this = this;
 
+        //Assign the socket map.
         _this._webSocketMap = webSocketMap;
 
         const webSocketServer = new Server(options);

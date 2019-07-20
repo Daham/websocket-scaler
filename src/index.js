@@ -9,8 +9,11 @@ import wsServer from './services/ws/wsServer';
 //concrete publisher subscriber service classes
 import amqpRpc from './services/rpc/amqpRpc';
 
+//concrete store service classes
+import redisStore from './services/store/redisStore';
+
 /**
- * @description - Web-Socket Server class.
+ * @description A class to represent the Server. This builds Server Wrapper Object according to the arguments provided. 
  * @export
  * @class Server
  * @extends {events.EventEmitter}
@@ -18,67 +21,68 @@ import amqpRpc from './services/rpc/amqpRpc';
 export default class Server extends events.EventEmitter {
 
     /**
-     *Creates an instance of Server.
-     * @param {object} { serverType, queueType, host, port, serverOptions, queueOptions }
+     * Creates an instance of Server.
+     * @param {object} { serverType, brokerType, storeType, serverOptions, messageBrokerOptions, storeOptions } - Types and options of server properties.
      * @memberof Server
      */
-    constructor({ serverType, queueType, serverOptions, messageBrokerOptions }) {
+    constructor({ serverType, queueType: brokerType, storeType: storeType, serverOptions, messageBrokerOptions, storeOptions }) {
         super();
+
+        //Facts on which concrete object types of properties to be used. 
         this._serverType = serverType;
-        this._queueType = queueType;
+        this._brokerType = brokerType;
+        this._storeType = storeType;
+
+        //Configurations of concrete object types of properties.
         this._serverOptions = serverOptions;
         this._messageBrokerOptions = messageBrokerOptions;
+        this._storeOptions = storeOptions;
 
+        //variables for concrete instances.
         this._server = null;
         this._wsServer = null;
-        this._pubSub = null;
+        this._messageBroker = null;
+        this._store = null;
 
         this._init();
     }
 
     /**
-     * @description - initialize a Web-socket server with different configuratiosn.
+     * @description - initialize a Web-socket server with different configurations.
      * @memberof Server
      */
     _init() {
         const _this = this;
-        switch (_this._serverType) {
-            case constants.WS:
-                switch (_this._queueType) {
-                    case constants.AMQP:
-                        _this._wsServer = wsServer;
-                        _this._messageBroker = amqpRpc;
-                        break;
-                    default:
-                        break;
+
+        //TODO: This will be written in more elabortaive fashion when extending.
+        if (_this._serverType === constants.WS) {
+            if (_this._brokerType === constants.AMQP) {
+                if (_this._storeType === constants.REDIS) {
+                    _this._wsServer = wsServer;
+                    _this._messageBroker = amqpRpc;
+                    _this._store = redisStore;
                 }
-                break;
-            case constants.SOCKET_IO:
-                switch (_this._queueType) {
-                    case constants.AMQP:
-                        break;
-                    default:
-                        break;
-                }
-                break;
-            default:
-                break;
+            }
         }
 
-        _this._initWebSocketServerWithPubSub();
+        _this._initWebSocketServerWithProperties();
     }
 
     /**
      * @description - initialize a websocket server by assigning different strategies to strategy managers.
      * @memberof Server
      */
-    _initWebSocketServerWithPubSub() {
+    _initWebSocketServerWithProperties() {
         const _this = this;
 
-        _this._server = new ServerWrapper(_this._serverOptions, _this._messageBrokerOptions);
+        _this._server = new ServerWrapper(_this._serverOptions, _this._messageBrokerOptions, _this._storeOptions);
+
+        //Initialize concerete strategies.
         _this._server.webSocketServer = _this._wsServer;
         _this._server.messageBroker = _this._messageBroker;
+        _this._server.store = _this._store;
 
+        //Initialize websocket listeners.
         _this._server.on('connection', (ws) => {
             _this.emit('connection', ws);
         });
@@ -104,15 +108,16 @@ export default class Server extends events.EventEmitter {
      * @description - stores web-socket (storing ws is essential for scaling bahavior)
      * @param {string} key - key in the socket map.
      * @param {object} ws - web-socket
+     * @param {object} metaDataObj - metadata to be stored within the websocket object itself (e.g identity, createdTime etc).
      * @memberof Server
      */
-    storeWebSocket(key, ws) {
-        this._server.storeWebSocket(key, ws);
+    storeWebSocket(key, ws, metaDataObj) {
+        this._server.storeWebSocket(key, ws, metaDataObj);
     }
 
     /**
      * @description - remove websocket (removing ws is essential for scaling bahavior)
-     * @param {*} key- key in the socket map.
+     * @param {object} key - key in the socket map.
      * @memberof Server
      */
     removeWebSocket(key) {
@@ -120,9 +125,10 @@ export default class Server extends events.EventEmitter {
     }
 
     /**
-     * @description - send message through a given socket
+     * @description - Send message through a given socket
      * @param {string} key - key in the socket map.
      * @param {string} message - message as a string.
+     * @param {*} callback - The callback that handles the response.
      * @memberof Server
      */
     send(key, message, callback) {
@@ -135,8 +141,9 @@ export default class Server extends events.EventEmitter {
     }
 
     /**
-     * @description - close web-socket
+     * @description - Close web-socket
      * @param {string} key - key in the socket map.
+     * @param {*} callback - The callback that handles the response.
      * @memberof Server
      */
     close(key, callback) {
@@ -159,15 +166,28 @@ export default class Server extends events.EventEmitter {
 
     /**
      * @description - get a web-socket by key.
-     * @param {*} key
-     * @returns
+     * @param {string} - key
+     * @returns {object} - websocket
      * @memberof Server
      */
     getWebSocket(key) {
         return this._server.getWebSocket(key);
     }
 
-
+    /**
+     * @description - Check whether the given websocket exists in other peer websocket maps.
+     * @param {string} key - key
+     * @param {boolean} callback - true/false
+     * @memberof Server
+     */
+    isWebSocketGloballyExist(key, callback) {
+        this._server.isWebSocketGloballyExist(key, function (err, isExist) {
+            if (err) {
+                return callback(true);
+            }
+            return callback(null, isExist);
+        });
+    }
 }
 
 

@@ -8,7 +8,8 @@ export default class Rpc extends events.EventEmitter {
 
     /**
      *Creates an instance of Rpc.
-     * @param {*} { username, password, host, serverFunc } - parameters for initiating the rpc.
+     * @param {*} { username, password, host }
+     * @param {*} serverFunc - remote procedure.
      * @memberof Rpc
      */
     constructor({ username, password, host }, serverFunc) {
@@ -21,13 +22,13 @@ export default class Rpc extends events.EventEmitter {
     }
 
     /**
-     * @description - set the required message queue for rpc.
+     * @description - Set the required message queue for rpc.
      * @param {object} messageBroker - message queue object.
      * @memberof PubSub
      */
     set messageBroker(messageBroker) {
         let _this = this;
-        
+
         _this._messageBroker = messageBroker;
         _this._messageBroker.initServerProcess({ username: _this._username, password: _this._password, host: _this._host }, _this._serverFunc);
     }

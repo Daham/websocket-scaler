@@ -12,9 +12,9 @@ const server = new Server({
     queueType: 'amqp',
     serverOptions: { port: process.env.PORT },
     messageBrokerOptions: {
-        username: '',
-        password: '',
-        host: ''
+        username: 'admin',
+        password: 'admin',
+        host: '54.190.230.194'
     }
 });
 
